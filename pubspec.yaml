@@ -41,6 +41,7 @@ dependencies:
   # Database - Fast, type-safe local database for Flutter
   isar: ^3.1.0
   isar_flutter_libs: ^3.1.0
+  path_provider: ^2.1.0  # Get application documents directory
 
   # Utilities
   intl: ^0.19.0    # Date formatting and internationalization
