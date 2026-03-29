@@ -1,142 +1,160 @@
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:task_flow/models/task.dart';
 import 'package:task_flow/models/task_draft.dart';
 
-/// TaskRepository handles all database operations for tasks
-/// Currently uses in-memory storage for simplicity
+/// TaskRepository handles all database operations for tasks using Isar
 class TaskRepository {
-  /// In-memory storage
-  final Map<int, Task> _tasks = {};
-  TaskDraft? _draft;
-  int _nextId = 1;
+  late Isar _isar;
 
   /// Singleton pattern
   static final TaskRepository _instance = TaskRepository._internal();
   factory TaskRepository() => _instance;
   TaskRepository._internal();
 
-  /// Initialize (no-op for in-memory)
+  /// Open the Isar database
   Future<void> initialize() async {
-    // Already initialized
+    final dir = await getApplicationDocumentsDirectory();
+    _isar = await Isar.open(
+      [TaskSchema, TaskDraftSchema],
+      directory: dir.path,
+      name: 'task_flow_db',
+    );
   }
 
-  /// Create a new task (with 2-second delay)
+  /// Get the Isar instance (for advanced queries if needed)
+  Isar get isar => _isar;
+
+  // ─────────────────────────────────── TASKS ────────────────────────────────
+
+  /// Create a new task (with 2-second simulated delay)
   Future<int> createTask(Task task) async {
     await Future.delayed(const Duration(seconds: 2));
-    task.id = _nextId++;
     task.createdAt = DateTime.now();
     task.updatedAt = DateTime.now();
-    _tasks[task.id!] = task;
-    return task.id!;
+    await _isar.writeTxn(() async {
+      task.id = await _isar.tasks.put(task);
+    });
+    return task.id;
   }
 
-  /// Get all tasks
+  /// Get all tasks sorted by creation date descending
   Future<List<Task>> getAllTasks() async {
-    final tasks = _tasks.values.toList();
-    tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return tasks;
+    return _isar.tasks.where().sortByCreatedAtDesc().findAll();
   }
 
   /// Get a single task by ID
   Future<Task?> getTaskById(int id) async {
-    return _tasks[id];
+    return _isar.tasks.get(id);
   }
 
-  /// Update an existing task (with 2-second delay)
+  /// Update an existing task (with 2-second simulated delay)
   Future<void> updateTask(Task task) async {
     await Future.delayed(const Duration(seconds: 2));
     task.updatedAt = DateTime.now();
-    _tasks[task.id!] = task;
+    await _isar.writeTxn(() async {
+      await _isar.tasks.put(task);
+    });
   }
 
-  /// Delete a task
+  /// Delete a task by ID
   Future<void> deleteTask(int id) async {
-    _tasks.remove(id);
+    await _isar.writeTxn(() async {
+      await _isar.tasks.delete(id);
+    });
   }
 
   /// Delete multiple tasks
   Future<void> deleteTasks(List<int> ids) async {
-    for (final id in ids) {
-      _tasks.remove(id);
-    }
+    await _isar.writeTxn(() async {
+      await _isar.tasks.deleteAll(ids);
+    });
   }
 
-  /// Search tasks
+  /// Search tasks by title or description (case-insensitive)
   Future<List<Task>> searchTasks(String query) async {
-    if (query.isEmpty) {
-      return await getAllTasks();
-    }
-    final lowerQuery = query.toLowerCase();
-    final tasks = _tasks.values
-        .where((task) =>
-            task.title.toLowerCase().contains(lowerQuery) ||
-            task.description.toLowerCase().contains(lowerQuery))
+    if (query.isEmpty) return getAllTasks();
+    final lower = query.toLowerCase();
+    final all = await getAllTasks();
+    return all
+        .where((t) =>
+            t.title.toLowerCase().contains(lower) ||
+            t.description.toLowerCase().contains(lower))
         .toList();
-    tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return tasks;
   }
 
-  /// Filter by status
+  /// Filter tasks by status
   Future<List<Task>> filterByStatus(TaskStatus status) async {
-    final tasks = _tasks.values
-        .where((task) => task.status == status.name)
-        .toList();
-    tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return tasks;
+    return _isar.tasks
+        .where()
+        .filter()
+        .statusEqualTo(status.name)
+        .sortByCreatedAtDesc()
+        .findAll();
   }
 
-  /// Get tasks blocked by
+  /// Get tasks blocked by a specific task
   Future<List<Task>> getTasksBlockedBy(int taskId) async {
-    return _tasks.values
-        .where((task) => task.blockedBy == taskId)
-        .toList();
-  }
-
-  /// Get blocked tasks
-  Future<List<Task>> getBlockedTasks() async {
-    return _tasks.values.where((task) => task.isBlocked).toList();
-  }
-
-  /// Save draft
-  Future<void> saveDraft(TaskDraft draft) async {
-    draft.id = 0;
-    draft.updatedAt = DateTime.now();
-    _draft = draft;
-  }
-
-  /// Get draft
-  Future<TaskDraft?> getDraft() async {
-    return _draft;
-  }
-
-  /// Clear draft
-  Future<void> clearDraft() async {
-    _draft = null;
-  }
-
-  /// Has draft
-  Future<bool> hasDraft() async {
-    return _draft != null && _draft!.hasData;
+    return _isar.tasks
+        .where()
+        .filter()
+        .blockedByEqualTo(taskId)
+        .findAll();
   }
 
   /// Get task count by status
   Future<int> getTaskCountByStatus(TaskStatus status) async {
-    return _tasks.values
-        .where((task) => task.status == status.name)
-        .length;
+    return _isar.tasks
+        .where()
+        .filter()
+        .statusEqualTo(status.name)
+        .count();
   }
 
-  /// Get total count
+  /// Get total task count
   Future<int> getTotalTaskCount() async {
-    return _tasks.length;
+    return _isar.tasks.count();
   }
 
-  /// Clear all
+  /// Clear all tasks
   Future<void> clearAllTasks() async {
-    _tasks.clear();
+    await _isar.writeTxn(() async {
+      await _isar.tasks.clear();
+    });
   }
 
-  /// Close
+  // ────────────────────────────────── DRAFTS ────────────────────────────────
+
+  /// Save (upsert) the current draft
+  Future<void> saveDraft(TaskDraft draft) async {
+    draft.updatedAt = DateTime.now();
+    await _isar.writeTxn(() async {
+      // Always use id=1 so there's only ever one draft
+      draft.id = 1;
+      await _isar.taskDrafts.put(draft);
+    });
+  }
+
+  /// Get the current draft
+  Future<TaskDraft?> getDraft() async {
+    return _isar.taskDrafts.get(1);
+  }
+
+  /// Check if a draft with data exists
+  Future<bool> hasDraft() async {
+    final draft = await getDraft();
+    return draft != null && draft.hasData;
+  }
+
+  /// Clear the current draft
+  Future<void> clearDraft() async {
+    await _isar.writeTxn(() async {
+      await _isar.taskDrafts.delete(1);
+    });
+  }
+
+  /// Close the Isar instance
   Future<void> close() async {
-    // No-op for in-memory
+    await _isar.close();
   }
 }

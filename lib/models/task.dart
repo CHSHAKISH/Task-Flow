@@ -1,3 +1,7 @@
+import 'package:isar/isar.dart';
+
+part 'task.g.dart';
+
 /// TaskStatus enum represents the three states a task can be in
 enum TaskStatus {
   todo,        // Task not started yet
@@ -29,25 +33,39 @@ enum TaskStatus {
 }
 
 /// Task model represents a single task in the application
+@collection
 class Task {
-  int? id;
+  Id id = Isar.autoIncrement;
+
   late String title;
   late String description;
   late DateTime dueDate;
+
+  /// Status stored as a String ('todo', 'inProgress', 'done')
   late String status;
+
   int? blockedBy;
   late int sortOrder;
+
+  @Index()
   late DateTime createdAt;
   late DateTime updatedAt;
 
   Task();
 
+  /// Computed getter – ignored by Isar schema generator
+  @ignore
   TaskStatus get statusEnum => TaskStatus.fromString(status);
+
   set statusEnum(TaskStatus value) {
     status = value.name;
   }
 
+  /// Computed getters – ignored by Isar
+  @ignore
   bool get isBlocked => blockedBy != null;
+
+  @ignore
   bool get isCompleted => statusEnum == TaskStatus.done;
 
   @override
