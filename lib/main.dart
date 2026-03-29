@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_flow/repositories/task_repository.dart';
 import 'package:task_flow/models/task.dart';
+import 'package:task_flow/models/task_draft.dart';
 
 void main() async {
   // Initialize repository before running app
@@ -39,7 +40,7 @@ class TaskListScreen extends StatefulWidget {
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen> {
+class _TaskListScreenState extends State<TaskListScreen> with WidgetsBindingObserver {
   final _repository = TaskRepository();
   late Future<List<Task>> _tasksFuture;
 
@@ -49,17 +50,34 @@ class _TaskListScreenState extends State<TaskListScreen> {
   TaskStatus? _selectedFilter;
   Timer? _debounce;
 
+  // Draft form controllers (null when dialog not open)
+  TextEditingController? _draftTitleController;
+  TextEditingController? _draftDescriptionController;
+  DateTime? _draftSelectedDate;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTasks();
+    _checkForDraft();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _debounce?.cancel();
+    _draftTitleController?.dispose();
+    _draftDescriptionController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _saveDraftIfFormOpen();
+    }
   }
 
   void _loadTasks() {
@@ -123,6 +141,102 @@ class _TaskListScreenState extends State<TaskListScreen> {
     } catch (e) {
       return 'Unknown task';
     }
+  }
+
+  Future<void> _checkForDraft() async {
+    final hasDraft = await _repository.hasDraft();
+    if (!hasDraft || !mounted) return;
+
+    final draft = await _repository.getDraft();
+    if (draft == null || !mounted) return;
+
+    // Check if draft is recent (within 24 hours)
+    final now = DateTime.now();
+    final draftAge = now.difference(draft.updatedAt);
+    if (draftAge.inHours > 24) {
+      // Draft too old, clear it
+      await _repository.clearDraft();
+      return;
+    }
+
+    // Show resume dialog
+    final shouldResume = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resume Draft?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('You have an unsaved task draft:'),
+            const SizedBox(height: 8),
+            Text(
+              draft.title ?? 'Untitled',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            if (draft.description != null && draft.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                draft.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'Created ${_formatDraftAge(draftAge)} ago',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await _repository.clearDraft();
+              Navigator.pop(context, false);
+            },
+            child: const Text('Discard'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Resume'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldResume == true && mounted) {
+      _showCreateTaskDialog(loadDraft: draft);
+    }
+  }
+
+  String _formatDraftAge(Duration age) {
+    if (age.inMinutes < 1) return 'just now';
+    if (age.inMinutes < 60) return '${age.inMinutes} minute${age.inMinutes > 1 ? 's' : ''}';
+    if (age.inHours < 24) return '${age.inHours} hour${age.inHours > 1 ? 's' : ''}';
+    return '${age.inDays} day${age.inDays > 1 ? 's' : ''}';
+  }
+
+  void _saveDraftIfFormOpen() {
+    // Only save if form is open and has content
+    if (_draftTitleController == null || _draftTitleController!.text.trim().isEmpty) {
+      return;
+    }
+
+    final title = _draftTitleController!.text.trim();
+    if (title.isEmpty) return;
+
+    // Save draft
+    final draft = TaskDraft()
+      ..id = 0
+      ..title = title
+      ..description = _draftDescriptionController?.text
+      ..dueDate = _draftSelectedDate
+      ..status = TaskStatus.todo.name
+      ..updatedAt = DateTime.now();
+
+    _repository.saveDraft(draft);
   }
 
   @override
@@ -417,16 +531,21 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  void _showCreateTaskDialog() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    DateTime? selectedDate;
+  void _showCreateTaskDialog({TaskDraft? loadDraft}) {
+    final titleController = TextEditingController(text: loadDraft?.title ?? '');
+    final descriptionController = TextEditingController(text: loadDraft?.description ?? '');
+    DateTime? selectedDate = loadDraft?.dueDate;
+
+    // Store in state for draft persistence
+    _draftTitleController = titleController;
+    _draftDescriptionController = descriptionController;
+    _draftSelectedDate = selectedDate;
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Create New Task'),
+          title: Text(loadDraft != null ? 'Resume Draft' : 'Create New Task'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -437,6 +556,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     labelText: 'Title',
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: (value) {
+                    setState(() {
+                      _draftTitleController = titleController;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -447,6 +571,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   ),
                   minLines: 2,
                   maxLines: 4,
+                  onChanged: (value) {
+                    setState(() {
+                      _draftDescriptionController = descriptionController;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 ListTile(
@@ -455,16 +584,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         ? 'Select due date'
                         : 'Due: ${selectedDate!.toLocal().toString().split(' ')[0]}',
                   ),
+                  trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
+                      initialDate: selectedDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (date != null) {
                       setDialogState(() {
                         selectedDate = date;
+                        _draftSelectedDate = date;
                       });
                     }
                   },
@@ -474,7 +605,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () {
+                // Clear draft when canceling
+                _draftTitleController = null;
+                _draftDescriptionController = null;
+                _draftSelectedDate = null;
+                Navigator.pop(dialogContext);
+              },
               child: const Text('Cancel'),
             ),
             ElevatedButton(
@@ -489,7 +626,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ],
         ),
       ),
-    );
+      barrierDismissible: false, // Prevent accidental dismissal
+    ).then((_) {
+      // Clear draft form references when dialog closes
+      _draftTitleController = null;
+      _draftDescriptionController = null;
+      _draftSelectedDate = null;
+    });
   }
 
   Future<void> _createTask(
@@ -532,6 +675,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
     // Save (includes 2-second delay)
     try {
       await _repository.createTask(task);
+
+      // Clear draft after successful creation
+      await _repository.clearDraft();
+      _draftTitleController = null;
+      _draftDescriptionController = null;
+      _draftSelectedDate = null;
 
       if (mounted) {
         // Refresh UI
