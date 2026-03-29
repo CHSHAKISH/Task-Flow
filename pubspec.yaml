@@ -38,11 +38,6 @@ dependencies:
   # State Management - Reactive state handling with compile-time safety
   flutter_riverpod: ^2.4.0
 
-  # Database - Fast, type-safe local database for Flutter
-  isar: ^3.1.0
-  isar_flutter_libs: ^3.1.0
-  path_provider: ^2.1.0  # Get application documents directory
-
   # Utilities
   intl: ^0.19.0    # Date formatting and internationalization
   uuid: ^4.3.0     # Generate unique IDs for drafts
@@ -57,10 +52,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-
-  # Code Generation for Isar Database
-  isar_generator: ^3.1.0
-  build_runner: ^2.4.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
