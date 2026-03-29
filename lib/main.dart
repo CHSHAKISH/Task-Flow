@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_flow/repositories/task_repository.dart';
@@ -42,14 +43,86 @@ class _TaskListScreenState extends State<TaskListScreen> {
   final _repository = TaskRepository();
   late Future<List<Task>> _tasksFuture;
 
+  // Search and filter state
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  TaskStatus? _selectedFilter;
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
     _loadTasks();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   void _loadTasks() {
     _tasksFuture = _repository.getAllTasks();
+  }
+
+  void _performSearch(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (query.isEmpty && _selectedFilter == null) {
+        setState(() {
+          _tasksFuture = _repository.getAllTasks();
+        });
+      } else if (query.isNotEmpty) {
+        setState(() {
+          _tasksFuture = _repository.searchTasks(query);
+        });
+      } else if (_selectedFilter != null) {
+        setState(() {
+          _tasksFuture = _repository.filterByStatus(_selectedFilter!);
+        });
+      }
+    });
+  }
+
+  void _applyFilter(TaskStatus? status) {
+    setState(() {
+      _selectedFilter = status;
+      if (status == null && _searchQuery.isEmpty) {
+        _tasksFuture = _repository.getAllTasks();
+      } else if (_searchQuery.isNotEmpty) {
+        _performSearch(_searchQuery);
+      } else if (status != null) {
+        _tasksFuture = _repository.filterByStatus(status);
+      }
+    });
+  }
+
+  bool _isTaskBlocked(Task task, List<Task> allTasks) {
+    if (task.blockedBy == null) return false;
+
+    try {
+      final blockingTask = allTasks.firstWhere(
+        (t) => t.id == task.blockedBy,
+      );
+      return !blockingTask.isCompleted;
+    } catch (e) {
+      // Blocking task not found (might have been deleted)
+      return false;
+    }
+  }
+
+  String? _getBlockerTitle(Task task, List<Task> allTasks) {
+    if (task.blockedBy == null) return null;
+
+    try {
+      final blockingTask = allTasks.firstWhere(
+        (t) => t.id == task.blockedBy,
+      );
+      return blockingTask.title;
+    } catch (e) {
+      return 'Unknown task';
+    }
   }
 
   @override
@@ -60,89 +133,270 @@ class _TaskListScreenState extends State<TaskListScreen> {
         centerTitle: true,
         elevation: 0,
       ),
-      body: FutureBuilder<List<Task>>(
-        future: _tasksFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-
-          final tasks = snapshot.data ?? [];
-
-          if (tasks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.inbox,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No tasks yet',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Create your first task to get started'),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _showCreateTaskDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Task'),
-                  ),
-                ],
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search tasks...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                          _performSearch('');
+                        },
+                      )
+                    : null,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-            );
-          }
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+                _performSearch(value);
+              },
+            ),
+          ),
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('All'),
+                  selected: _selectedFilter == null,
+                  onSelected: (selected) {
+                    if (selected) _applyFilter(null);
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('To Do'),
+                  selected: _selectedFilter == TaskStatus.todo,
+                  onSelected: (selected) {
+                    _applyFilter(selected ? TaskStatus.todo : null);
+                  },
+                  avatar: Icon(
+                    Icons.circle,
+                    size: 12,
+                    color: _selectedFilter == TaskStatus.todo
+                        ? Colors.white
+                        : Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('In Progress'),
+                  selected: _selectedFilter == TaskStatus.inProgress,
+                  onSelected: (selected) {
+                    _applyFilter(selected ? TaskStatus.inProgress : null);
+                  },
+                  avatar: Icon(
+                    Icons.circle,
+                    size: 12,
+                    color: _selectedFilter == TaskStatus.inProgress
+                        ? Colors.white
+                        : Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Done'),
+                  selected: _selectedFilter == TaskStatus.done,
+                  onSelected: (selected) {
+                    _applyFilter(selected ? TaskStatus.done : null);
+                  },
+                  avatar: Icon(
+                    Icons.circle,
+                    size: 12,
+                    color: _selectedFilter == TaskStatus.done
+                        ? Colors.white
+                        : Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Task List
+          Expanded(
+            child: FutureBuilder<List<Task>>(
+              future: _tasksFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              setState(() {
-                _loadTasks();
-              });
-            },
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
+                  );
+                }
+
+                final tasks = snapshot.data ?? [];
+
+                if (tasks.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.inbox,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchQuery.isNotEmpty || _selectedFilter != null
+                              ? 'No tasks found'
+                              : 'No tasks yet',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _searchQuery.isNotEmpty || _selectedFilter != null
+                              ? 'Try adjusting your search or filter'
+                              : 'Create your first task to get started',
+                        ),
+                        if (_searchQuery.isEmpty && _selectedFilter == null) ...[
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _showCreateTaskDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Task'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    setState(() {
+                      _loadTasks();
+                    });
+                  },
             child: ListView.builder(
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 final task = tasks[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: ListTile(
-                    leading: Checkbox(
-                      value: task.isCompleted,
-                      onChanged: (value) {
-                        // will implement in phase 3
-                      },
-                    ),
-                    title: Text(
-                      task.title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        decoration: task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
+                final isBlocked = _isTaskBlocked(task, tasks);
+                final blockerTitle = _getBlockerTitle(task, tasks);
+
+                return Opacity(
+                  opacity: isBlocked ? 0.5 : 1.0,
+                  child: Dismissible(
+                    key: Key('task-${task.id}'),
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      child: const Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                        size: 32,
                       ),
                     ),
-                    subtitle: Text(
-                      task.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Chip(
-                      label: Text(task.statusEnum.displayName),
-                      backgroundColor: _getStatusColor(task.statusEnum),
-                      labelStyle: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (direction) => _confirmDelete(task),
+                    onDismissed: (direction) => _deleteTask(task),
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: ListTile(
+                        onTap: isBlocked ? null : () => _showEditTaskDialog(task),
+                        leading: isBlocked
+                            ? const Icon(
+                                Icons.lock_outline,
+                                color: Colors.grey,
+                                size: 32,
+                              )
+                            : Checkbox(
+                                value: task.isCompleted,
+                                onChanged: (value) {
+                                  // Quick toggle status
+                                  if (value == true) {
+                                    task.statusEnum = TaskStatus.done;
+                                  } else {
+                                    task.statusEnum = TaskStatus.todo;
+                                  }
+                                  _repository.updateTask(task);
+                                  setState(() {
+                                    _loadTasks();
+                                  });
+                                },
+                              ),
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            decoration: task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: isBlocked ? Colors.grey : null,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isBlocked ? Colors.grey : null,
+                              ),
+                            ),
+                            if (isBlocked && blockerTitle != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.block,
+                                    size: 14,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Blocked by: $blockerTitle',
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: Chip(
+                          label: Text(
+                            isBlocked ? 'Blocked' : task.statusEnum.displayName,
+                          ),
+                          backgroundColor: isBlocked
+                              ? Colors.grey
+                              : _getStatusColor(task.statusEnum),
+                          labelStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -151,6 +405,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           );
         },
+      ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateTaskDialog,
@@ -295,6 +552,260 @@ class _TaskListScreenState extends State<TaskListScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating task: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool?> _confirmDelete(Task task) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Task'),
+        content: Text('Are you sure you want to delete "${task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteTask(Task task) async {
+    try {
+      await _repository.deleteTask(task.id!);
+
+      if (mounted) {
+        setState(() {
+          _loadTasks();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Task "${task.title}" deleted'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting task: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditTaskDialog(Task task) async {
+    final titleController = TextEditingController(text: task.title);
+    final descriptionController = TextEditingController(text: task.description);
+    DateTime? selectedDate = task.dueDate;
+    TaskStatus selectedStatus = task.statusEnum;
+    int? selectedBlocker = task.blockedBy;
+
+    // Get all tasks for blocked-by dropdown
+    final allTasks = await _repository.getAllTasks();
+    final availableTasks = allTasks.where((t) => t.id != task.id).toList();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Task'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  minLines: 2,
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: Text(
+                    selectedDate == null
+                        ? 'Select due date'
+                        : 'Due: ${selectedDate!.toLocal().toString().split(' ')[0]}',
+                  ),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      setDialogState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<TaskStatus>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: TaskStatus.values.map((status) {
+                    return DropdownMenuItem(
+                      value: status,
+                      child: Text(status.displayName),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() {
+                        selectedStatus = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int?>(
+                  value: selectedBlocker,
+                  decoration: const InputDecoration(
+                    labelText: 'Blocked By (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('None'),
+                    ),
+                    ...availableTasks.map((t) {
+                      return DropdownMenuItem<int?>(
+                        value: t.id,
+                        child: Text(t.title),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedBlocker = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => _updateTask(
+                task,
+                titleController,
+                descriptionController,
+                selectedDate,
+                selectedStatus,
+                selectedBlocker,
+                dialogContext,
+              ),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateTask(
+    Task task,
+    TextEditingController titleController,
+    TextEditingController descriptionController,
+    DateTime? selectedDate,
+    TaskStatus selectedStatus,
+    int? selectedBlocker,
+    BuildContext dialogContext,
+  ) async {
+    if (titleController.text.isEmpty ||
+        descriptionController.text.isEmpty ||
+        selectedDate == null) {
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all required fields'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Close the dialog
+    Navigator.pop(dialogContext);
+
+    // Show loading message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Updating task... (2 second delay)'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    // Update task
+    task.title = titleController.text;
+    task.description = descriptionController.text;
+    task.dueDate = selectedDate;
+    task.statusEnum = selectedStatus;
+    task.blockedBy = selectedBlocker;
+
+    // Save (includes 2-second delay)
+    try {
+      await _repository.updateTask(task);
+
+      if (mounted) {
+        // Refresh UI
+        setState(() {
+          _loadTasks();
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task updated successfully!'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating task: $e'),
             duration: const Duration(seconds: 2),
           ),
         );
