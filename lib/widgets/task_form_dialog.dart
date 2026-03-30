@@ -165,6 +165,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
   Widget build(BuildContext context) {
     final availableTasks = widget.allTasks
         .where((t) => _isEdit ? t.id != widget.task!.id : true)
+        .where((t) => t.statusEnum != TaskStatus.done)
         .toList();
 
     return AlertDialog(
@@ -182,7 +183,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
               onChanged: (_) => setState(() {}),
               enabled: !_isSaving,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: _descriptionController,
               decoration: const InputDecoration(labelText: 'Description *'),
@@ -191,7 +192,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
               onChanged: (_) => setState(() {}),
               enabled: !_isSaving,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             ListTile(
               title: Text(
                 _selectedDate == null ? 'Select due date *' : 'Due: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
@@ -203,7 +204,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
               tileColor: Colors.grey.shade100,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             if (_isEdit)
               DropdownButtonFormField<TaskStatus>(
                 initialValue: _selectedStatus,
@@ -213,7 +214,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
                   if (value != null) setState(() => _selectedStatus = value);
                 },
               ),
-            if (_isEdit) const SizedBox(height: 12),
+            if (_isEdit) const SizedBox(height: 16),
             DropdownButtonFormField<int?>(
               initialValue: _selectedBlocker,
               decoration: const InputDecoration(labelText: 'Blocked By (Optional)'),
@@ -225,7 +226,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
                 setState(() => _selectedBlocker = value);
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             DropdownButtonFormField<String?>(
               initialValue: _selectedRecurringType,
               decoration: const InputDecoration(labelText: 'Recurring (Optional)'),
