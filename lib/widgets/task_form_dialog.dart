@@ -165,7 +165,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
   Widget build(BuildContext context) {
     final availableTasks = widget.allTasks
         .where((t) => _isEdit ? t.id != widget.task!.id : true)
-        .where((t) => t.statusEnum != TaskStatus.done)
+        .where((t) => t.statusEnum != TaskStatus.done || t.id == _selectedBlocker)
         .toList();
 
     return AlertDialog(
