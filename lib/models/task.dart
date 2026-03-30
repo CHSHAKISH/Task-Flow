@@ -1,7 +1,3 @@
-import 'package:isar/isar.dart';
-
-part 'task.g.dart';
-
 /// TaskStatus enum represents the three states a task can be in
 enum TaskStatus {
   todo,        // Task not started yet
@@ -33,40 +29,55 @@ enum TaskStatus {
 }
 
 /// Task model represents a single task in the application
-@collection
 class Task {
-  Id id = Isar.autoIncrement;
-
+  int? id;
   late String title;
   late String description;
   late DateTime dueDate;
-
-  /// Status stored as a String ('todo', 'inProgress', 'done')
   late String status;
-
   int? blockedBy;
   late int sortOrder;
-
-  @Index()
   late DateTime createdAt;
   late DateTime updatedAt;
 
   Task();
 
-  /// Computed getter – ignored by Isar schema generator
-  @ignore
   TaskStatus get statusEnum => TaskStatus.fromString(status);
-
   set statusEnum(TaskStatus value) {
     status = value.name;
   }
 
-  /// Computed getters – ignored by Isar
-  @ignore
   bool get isBlocked => blockedBy != null;
-
-  @ignore
   bool get isCompleted => statusEnum == TaskStatus.done;
+
+  // JSON serialization
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'dueDate': dueDate.toIso8601String(),
+      'status': status,
+      'blockedBy': blockedBy,
+      'sortOrder': sortOrder,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory Task.fromJson(Map<String, dynamic> json) {
+    final task = Task()
+      ..id = json['id'] as int?
+      ..title = json['title'] as String
+      ..description = json['description'] as String
+      ..dueDate = DateTime.parse(json['dueDate'] as String)
+      ..status = json['status'] as String
+      ..blockedBy = json['blockedBy'] as int?
+      ..sortOrder = json['sortOrder'] as int
+      ..createdAt = DateTime.parse(json['createdAt'] as String)
+      ..updatedAt = DateTime.parse(json['updatedAt'] as String);
+    return task;
+  }
 
   @override
   String toString() {

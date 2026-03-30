@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:task_flow/models/task.dart';
 import 'package:task_flow/models/task_draft.dart';
 import 'package:task_flow/repositories/task_repository.dart';
-import 'package:task_flow/theme/app_theme.dart';
 
-/// TaskFormDialog handles both Create and Edit modes.
-/// In Create mode it also auto-saves a draft on app pause.
 class TaskFormDialog extends StatefulWidget {
-  final Task? task;           // null → Create mode
-  final TaskDraft? draft;     // pre-fill from saved draft
-  final List<Task> allTasks;  // for Blocked-By dropdown
+  final Task? task; // null for create, non-null for edit
+  final TaskDraft? draft; // For resuming drafts
+  final List<Task> allTasks; // For blocked-by dropdown
   final Future<void> Function(Task task)? onSave;
 
   const TaskFormDialog({
@@ -26,8 +21,7 @@ class TaskFormDialog extends StatefulWidget {
   State<TaskFormDialog> createState() => _TaskFormDialogState();
 }
 
-class _TaskFormDialogState extends State<TaskFormDialog>
-    with WidgetsBindingObserver {
+class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObserver {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   DateTime? _selectedDate;
@@ -45,21 +39,21 @@ class _TaskFormDialogState extends State<TaskFormDialog>
     WidgetsBinding.instance.addObserver(this);
 
     if (_isEdit) {
-      _titleController       = TextEditingController(text: widget.task!.title);
+      _titleController = TextEditingController(text: widget.task!.title);
       _descriptionController = TextEditingController(text: widget.task!.description);
-      _selectedDate          = widget.task!.dueDate;
-      _selectedStatus        = widget.task!.statusEnum;
-      _selectedBlocker       = widget.task!.blockedBy;
+      _selectedDate = widget.task!.dueDate;
+      _selectedStatus = widget.task!.statusEnum;
+      _selectedBlocker = widget.task!.blockedBy;
     } else if (widget.draft != null) {
-      _titleController       = TextEditingController(text: widget.draft!.title ?? '');
-      _descriptionController = TextEditingController(text: widget.draft!.description ?? '');
-      _selectedDate          = widget.draft!.dueDate;
-      _selectedStatus        = widget.draft!.status != null
+      _titleController = TextEditingController(text: widget.draft!.title);
+      _descriptionController = TextEditingController(text: widget.draft!.description);
+      _selectedDate = widget.draft!.dueDate;
+      _selectedStatus = widget.draft!.status != null
           ? TaskStatus.fromString(widget.draft!.status!)
           : TaskStatus.todo;
       _selectedBlocker = widget.draft!.blockedBy;
     } else {
-      _titleController       = TextEditingController();
+      _titleController = TextEditingController();
       _descriptionController = TextEditingController();
     }
   }
@@ -74,80 +68,82 @@ class _TaskFormDialogState extends State<TaskFormDialog>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_isEdit &&
-        (state == AppLifecycleState.paused ||
-            state == AppLifecycleState.inactive)) {
-      _saveDraft();
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _saveDraftIfFormOpen();
     }
   }
 
-  void _saveDraft() {
+  void _saveDraftIfFormOpen() {
+    if (_isEdit) return; // Don't save draft if editing
+
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
     final draft = TaskDraft()
-      ..title       = title
+      ..id = 0
+      ..title = title
       ..description = _descriptionController.text.trim()
-      ..dueDate     = _selectedDate
-      ..status      = _selectedStatus.name
-      ..blockedBy   = _selectedBlocker
-      ..updatedAt   = DateTime.now();
+      ..dueDate = _selectedDate
+      ..status = _selectedStatus.name
+      ..updatedAt = DateTime.now();
 
     _repository.saveDraft(draft);
   }
 
-  bool get _isValid =>
-      _titleController.text.trim().isNotEmpty &&
-      _descriptionController.text.trim().isNotEmpty &&
-      _selectedDate != null;
+  bool _validateForm() {
+    return _titleController.text.trim().isNotEmpty &&
+        _descriptionController.text.trim().isNotEmpty &&
+        _selectedDate != null;
+  }
 
   Future<void> _handleSave() async {
-    if (!_isValid) return;
+    if (!_validateForm()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields'), duration: Duration(seconds: 2)),
+      );
+      return;
+    }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+    });
 
-    final now = DateTime.now();
     final taskToSave = Task()
-      ..id          = _isEdit ? widget.task!.id : 0
-      ..title       = _titleController.text.trim()
+      ..id = _isEdit ? widget.task!.id : null
+      ..title = _titleController.text.trim()
       ..description = _descriptionController.text.trim()
-      ..dueDate     = _selectedDate!
-      ..status      = _selectedStatus.name
-      ..blockedBy   = _selectedBlocker
-      ..sortOrder   = _isEdit ? widget.task!.sortOrder : 0
-      ..createdAt   = _isEdit ? widget.task!.createdAt : now
-      ..updatedAt   = now;
+      ..dueDate = _selectedDate!
+      ..status = _selectedStatus.name
+      ..blockedBy = _selectedBlocker
+      ..createdAt = _isEdit ? widget.task!.createdAt : DateTime.now()
+      ..updatedAt = DateTime.now();
 
-    try {
-      await widget.onSave?.call(taskToSave);
-      if (!_isEdit) await _repository.clearDraft();
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+    if (widget.onSave != null) {
+      await widget.onSave!(taskToSave);
+      
+      if (!_isEdit) {
+        await _repository.clearDraft(); // Clear draft on successful create save
       }
+    }
+
+    if (mounted) {
+      Navigator.pop(context, true);
     }
   }
 
-  Future<void> _pickDate() async {
+  Future<void> _showDatePicker() async {
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(
-            primary: AppTheme.primarySeed,
-          ),
-        ),
-        child: child!,
-      ),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date != null) setState(() => _selectedDate = date);
+
+    if (date != null) {
+      setState(() {
+        _selectedDate = date;
+      });
+    }
   }
 
   @override
@@ -156,294 +152,80 @@ class _TaskFormDialogState extends State<TaskFormDialog>
         .where((t) => _isEdit ? t.id != widget.task!.id : true)
         .toList();
 
-    final dialogTitle = _isEdit
-        ? 'Edit Task'
-        : (widget.draft != null ? '📝 Resume Draft' : 'New Task');
-
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+    return AlertDialog(
+      title: Text(_isEdit ? 'Edit Task' : (widget.draft != null ? 'Resume Draft' : 'Create New Task')),
+      content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────────
-            Text(dialogTitle, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 20),
-
-            // ── Scrollable form body ─────────────────────────────────
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildField(
-                      controller: _titleController,
-                      label: 'Title',
-                      hint: 'What needs to be done?',
-                      maxLines: 1,
-                      enabled: !_isSaving,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildField(
-                      controller: _descriptionController,
-                      label: 'Description',
-                      hint: 'Add more details…',
-                      maxLines: 3,
-                      enabled: !_isSaving,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── Date Picker ────────────────────────────────
-                    _SectionLabel(label: 'Due Date'),
-                    const SizedBox(height: 6),
-                    _DatePickerButton(
-                      selectedDate: _selectedDate,
-                      enabled: !_isSaving,
-                      onTap: _pickDate,
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── Status (Edit only) ─────────────────────────
-                    if (_isEdit) ...[
-                      _SectionLabel(label: 'Status'),
-                      const SizedBox(height: 6),
-                      _StatusSelector(
-                        selected: _selectedStatus,
-                        enabled: !_isSaving,
-                        onChanged: (s) => setState(() => _selectedStatus = s),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-
-                    // ── Blocked By ─────────────────────────────────
-                    _SectionLabel(label: 'Blocked By'),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<int?>(
-                      initialValue: _selectedBlocker,
-                      decoration: const InputDecoration(
-                        hintText: 'None – not blocked',
-                      ),
-                      isExpanded: true,
-                      items: [
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('None – not blocked'),
-                        ),
-                        ...availableTasks.map(
-                          (t) => DropdownMenuItem<int?>(
-                            value: t.id,
-                            child: Text(
-                              t.title,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: _isSaving
-                          ? null
-                          : (v) => setState(() => _selectedBlocker = v),
-                    ),
-                  ],
-                ),
-              ),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title *', border: OutlineInputBorder()),
+              onChanged: (_) => setState(() {}),
+              enabled: !_isSaving,
             ),
-
-            const SizedBox(height: 20),
-
-            // ── Action Buttons ───────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () {
-                          if (!_isEdit) _saveDraft();
-                          Navigator.pop(context, false);
-                        },
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 8),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _isSaving
-                      ? const SizedBox(
-                          key: ValueKey('loading'),
-                          width: 100,
-                          height: 42,
-                          child: Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5),
-                            ),
-                          ),
-                        )
-                      : ElevatedButton(
-                          key: const ValueKey('save'),
-                          onPressed: _isValid ? _handleSave : null,
-                          child: Text(_isEdit ? 'Update' : 'Create Task'),
-                        ),
-                ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Description *', border: OutlineInputBorder()),
+              minLines: 2,
+              maxLines: 4,
+              onChanged: (_) => setState(() {}),
+              enabled: !_isSaving,
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              title: Text(
+                _selectedDate == null ? 'Select due date *' : 'Due: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
+                style: TextStyle(color: _selectedDate == null ? Colors.grey : null),
+              ),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: _isSaving ? null : _showDatePicker,
+              shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(4)),
+            ),
+            const SizedBox(height: 12),
+            if (_isEdit)
+              DropdownButtonFormField<TaskStatus>(
+                value: _selectedStatus,
+                decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+                items: TaskStatus.values.map((status) => DropdownMenuItem(value: status, child: Text(status.displayName))).toList(),
+                onChanged: _isSaving ? null : (value) {
+                  if (value != null) setState(() => _selectedStatus = value);
+                },
+              ),
+            if (_isEdit) const SizedBox(height: 12),
+            DropdownButtonFormField<int?>(
+              value: _selectedBlocker,
+              decoration: const InputDecoration(labelText: 'Blocked By (Optional)', border: OutlineInputBorder()),
+              items: [
+                const DropdownMenuItem<int?>(value: null, child: Text('None')),
+                ...availableTasks.map((t) => DropdownMenuItem<int?>(value: t.id, child: Text(t.title))),
               ],
+              onChanged: _isSaving ? null : (value) {
+                setState(() => _selectedBlocker = value);
+              },
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    String? hint,
-    int maxLines = 1,
-    bool enabled = true,
-    ValueChanged<String>? onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionLabel(label: label),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          decoration: InputDecoration(hintText: hint),
-          style: GoogleFonts.inter(fontSize: 14),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () {
+            if (!_isEdit) {
+              // Optionally we can keep the draft around, or save it on cancel
+              _saveDraftIfFormOpen();
+            }
+            Navigator.pop(context, false);
+          },
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving || !_validateForm() ? null : _handleSave,
+          child: _isSaving
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(_isEdit ? 'Update' : 'Create'),
         ),
       ],
-    );
-  }
-}
-
-// ─── Supporting Widgets ──────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  final String label;
-  const _SectionLabel({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: Colors.grey.shade600,
-        letterSpacing: 0.3,
-      ),
-    );
-  }
-}
-
-class _DatePickerButton extends StatelessWidget {
-  final DateTime? selectedDate;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _DatePickerButton({
-    required this.selectedDate,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final formatted = selectedDate != null
-        ? DateFormat('EEE, MMM d, y').format(selectedDate!)
-        : null;
-
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FF),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_month_rounded,
-              size: 18,
-              color: selectedDate != null
-                  ? AppTheme.primarySeed
-                  : Colors.grey.shade400,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              formatted ?? 'Select due date',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: selectedDate != null
-                    ? const Color(0xFF1A1A2E)
-                    : Colors.grey.shade400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusSelector extends StatelessWidget {
-  final TaskStatus selected;
-  final bool enabled;
-  final ValueChanged<TaskStatus> onChanged;
-
-  const _StatusSelector({
-    required this.selected,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: TaskStatus.values.map((status) {
-        final isSelected = selected == status;
-        final color = AppTheme.getStatusColor(status);
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: GestureDetector(
-              onTap: enabled ? () => onChanged(status) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? color : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? color : Colors.grey.shade300,
-                    width: isSelected ? 0 : 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    status.displayName,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }
