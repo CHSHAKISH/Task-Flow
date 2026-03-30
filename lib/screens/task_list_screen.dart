@@ -282,16 +282,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
           final isBlocked = TaskOperations.isTaskBlocked(task, tasks);
           final blockerTitle = TaskOperations.getBlockerTitle(task, tasks);
 
-          return TaskCard(
+          return KeyedSubtree(
             key: ValueKey('task-${task.id}'),
-            task: task,
-            isBlocked: isBlocked,
-            blockerTitle: blockerTitle,
-            searchQuery: searchQuery,
-            onTap: () => _showEditDialog(task),
-            onDelete: () => _deleteTask(task),
-            onCheckboxChanged: (v) => _toggleComplete(task, v),
-          ).animate().fade(duration: 300.ms).slideX(begin: 0.1, curve: Curves.easeOutQuad);
+            child: TaskCard(
+              task: task,
+              isBlocked: isBlocked,
+              blockerTitle: blockerTitle,
+              searchQuery: searchQuery,
+              onTap: () => _showEditDialog(task),
+              onDelete: () => _deleteTask(task),
+              onCheckboxChanged: (v) => _toggleComplete(task, v),
+            ).animate().fade(duration: 300.ms).slideX(begin: 0.1, curve: Curves.easeOutQuad),
+          );
         },
       ),
     );
