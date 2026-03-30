@@ -31,11 +31,9 @@ class HighlightedText extends StatelessWidget {
     }
 
     final spans = _buildSpans();
-    return RichText(
-      text: TextSpan(
-        style: style ?? DefaultTextStyle.of(context).style,
-        children: spans,
-      ),
+    return Text.rich(
+      TextSpan(children: spans),
+      style: style,
       maxLines: maxLines,
       overflow: overflow ?? TextOverflow.clip,
     );

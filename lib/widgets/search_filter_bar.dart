@@ -66,7 +66,6 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                       },
                     )
                   : null,
-              border: InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),

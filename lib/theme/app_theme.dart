@@ -43,6 +43,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16), // Softer borders
           borderSide: BorderSide.none,
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.blue.shade300, width: 1.5),
+        ),
       ),
 
       // App bar theme
