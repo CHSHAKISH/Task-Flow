@@ -109,14 +109,18 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
     });
 
     final taskToSave = Task()
-      ..id = _isEdit ? widget.task!.id : null
       ..title = _titleController.text.trim()
       ..description = _descriptionController.text.trim()
       ..dueDate = _selectedDate!
       ..status = _selectedStatus.name
       ..blockedBy = _selectedBlocker
+      ..sortOrder = _isEdit ? widget.task!.sortOrder : 0
       ..createdAt = _isEdit ? widget.task!.createdAt : DateTime.now()
       ..updatedAt = DateTime.now();
+
+    if (_isEdit) {
+      taskToSave.id = widget.task!.id;
+    }
 
     if (widget.onSave != null) {
       await widget.onSave!(taskToSave);
@@ -186,7 +190,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
             const SizedBox(height: 12),
             if (_isEdit)
               DropdownButtonFormField<TaskStatus>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
                 items: TaskStatus.values.map((status) => DropdownMenuItem(value: status, child: Text(status.displayName))).toList(),
                 onChanged: _isSaving ? null : (value) {
@@ -195,7 +199,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
               ),
             if (_isEdit) const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
-              value: _selectedBlocker,
+              initialValue: _selectedBlocker,
               decoration: const InputDecoration(labelText: 'Blocked By (Optional)', border: OutlineInputBorder()),
               items: [
                 const DropdownMenuItem<int?>(value: null, child: Text('None')),

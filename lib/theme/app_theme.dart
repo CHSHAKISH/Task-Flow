@@ -3,6 +3,9 @@ import 'package:task_flow/models/task.dart';
 
 /// AppTheme provides centralized theming for the Task Flow app
 class AppTheme {
+  static const primarySeed = Colors.blue;
+  static const danger = Colors.red;
+
   /// Light theme configuration with Material Design 3
   static ThemeData get lightTheme {
     return ThemeData(

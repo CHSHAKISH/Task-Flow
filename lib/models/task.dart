@@ -1,3 +1,7 @@
+import 'package:isar/isar.dart';
+
+part 'task.g.dart';
+
 /// TaskStatus enum represents the three states a task can be in
 enum TaskStatus {
   todo,        // Task not started yet
@@ -29,8 +33,9 @@ enum TaskStatus {
 }
 
 /// Task model represents a single task in the application
+@collection
 class Task {
-  int? id;
+  Id id = Isar.autoIncrement;
   late String title;
   late String description;
   late DateTime dueDate;
@@ -42,12 +47,17 @@ class Task {
 
   Task();
 
+  @ignore
   TaskStatus get statusEnum => TaskStatus.fromString(status);
+  
   set statusEnum(TaskStatus value) {
     status = value.name;
   }
 
+  @ignore
   bool get isBlocked => blockedBy != null;
+  
+  @ignore
   bool get isCompleted => statusEnum == TaskStatus.done;
 
   // JSON serialization
@@ -67,7 +77,6 @@ class Task {
 
   factory Task.fromJson(Map<String, dynamic> json) {
     final task = Task()
-      ..id = json['id'] as int?
       ..title = json['title'] as String
       ..description = json['description'] as String
       ..dueDate = DateTime.parse(json['dueDate'] as String)
@@ -76,6 +85,10 @@ class Task {
       ..sortOrder = json['sortOrder'] as int
       ..createdAt = DateTime.parse(json['createdAt'] as String)
       ..updatedAt = DateTime.parse(json['updatedAt'] as String);
+    
+    if (json['id'] != null) {
+      task.id = json['id'] as int;
+    }
     return task;
   }
 

@@ -10,6 +10,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final ValueChanged<bool?>? onCheckboxChanged;
+  final String searchQuery;
 
   const TaskCard({
     super.key,
@@ -19,6 +20,7 @@ class TaskCard extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onCheckboxChanged,
+    this.searchQuery = '',
   });
 
   @override

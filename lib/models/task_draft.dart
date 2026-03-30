@@ -1,6 +1,11 @@
+import 'package:isar/isar.dart';
+
+part 'task_draft.g.dart';
+
 /// TaskDraft model for persisting unsaved task form data
+@collection
 class TaskDraft {
-  int id = 0;
+  Id id = 0;
   String? title;
   String? description;
   DateTime? dueDate;
@@ -10,6 +15,7 @@ class TaskDraft {
 
   TaskDraft();
 
+  @ignore
   bool get hasData {
     return title != null ||
         description != null ||
@@ -18,6 +24,7 @@ class TaskDraft {
         blockedBy != null;
   }
 
+  @ignore
   bool get isRecent {
     final now = DateTime.now();
     final difference = now.difference(updatedAt);

@@ -1,0 +1,17 @@
+﻿Analyzing lib...                                                
+
+warning - The annotation 'ignore' can only be used on fields or getters - lib\models\task.dart:53:4 - invalid_annotation_target
+  error - A value of type 'int?' can't be assigned to a variable of type 'Id' - lib\models\task.dart:81:14 - invalid_assignment
+  error - The getter 'primarySeed' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:197:31 - undefined_getter
+  error - The getter 'primarySeed' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:231:23 - undefined_getter
+  error - The named parameter 'searchQuery' isn't defined - lib\screens\task_list_screen.dart:245:13 - undefined_named_parameter
+  error - Invalid constant value - lib\screens\task_list_screen.dart:278:66 - invalid_constant
+  error - The getter 'primarySeed' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:278:75 - undefined_getter
+  error - The getter 'danger' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:328:65 - undefined_getter
+  error - The getter 'primarySeed' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:365:33 - undefined_getter
+  error - Invalid constant value - lib\screens\task_list_screen.dart:417:34 - invalid_constant
+  error - The getter 'danger' isn't defined for the type 'AppTheme' - lib\screens\task_list_screen.dart:417:43 - undefined_getter
+  error - A value of type 'Id?' can't be assigned to a variable of type 'Id' - lib\widgets\task_form_dialog.dart:112:14 - invalid_assignment
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\widgets\task_form_dialog.dart:189:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\widgets\task_form_dialog.dart:198:15 - deprecated_member_use
+
