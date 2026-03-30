@@ -142,11 +142,16 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
   }
 
   Future<void> _showDatePicker() async {
+    final now = DateTime.now();
+    // Allow initial date if past (during edit), but don't allow selecting new past dates.
+    final initial = _selectedDate ?? now;
+    final first = initial.isBefore(now) ? initial : DateTime(now.year, now.month, now.day);
+    
     final date = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: now.add(const Duration(days: 365 * 5)),
     );
 
     if (date != null) {
@@ -163,21 +168,24 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
         .toList();
 
     return AlertDialog(
-      title: Text(_isEdit ? 'Edit Task' : (widget.draft != null ? 'Resume Draft' : 'Create New Task')),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      title: Text(_isEdit ? 'Edit Task' : (widget.draft != null ? 'Resume Draft' : 'Create New Task'), style: const TextStyle(fontWeight: FontWeight.w700)),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title *', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Title *'),
               onChanged: (_) => setState(() {}),
               enabled: !_isSaving,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description *', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Description *'),
               minLines: 2,
               maxLines: 4,
               onChanged: (_) => setState(() {}),
@@ -189,15 +197,17 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
                 _selectedDate == null ? 'Select due date *' : 'Due: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
                 style: TextStyle(color: _selectedDate == null ? Colors.grey : null),
               ),
-              trailing: const Icon(Icons.calendar_today),
+              trailing: const Icon(Icons.calendar_today, color: Colors.grey),
               onTap: _isSaving ? null : _showDatePicker,
-              shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              tileColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             ),
             const SizedBox(height: 12),
             if (_isEdit)
               DropdownButtonFormField<TaskStatus>(
                 initialValue: _selectedStatus,
-                decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Status'),
                 items: TaskStatus.values.map((status) => DropdownMenuItem(value: status, child: Text(status.displayName))).toList(),
                 onChanged: _isSaving ? null : (value) {
                   if (value != null) setState(() => _selectedStatus = value);
@@ -206,7 +216,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
             if (_isEdit) const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
               initialValue: _selectedBlocker,
-              decoration: const InputDecoration(labelText: 'Blocked By (Optional)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Blocked By (Optional)'),
               items: [
                 const DropdownMenuItem<int?>(value: null, child: Text('None')),
                 ...availableTasks.map((t) => DropdownMenuItem<int?>(value: t.id, child: Text(t.title))),
@@ -218,7 +228,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
             const SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               initialValue: _selectedRecurringType,
-              decoration: const InputDecoration(labelText: 'Recurring (Optional)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Recurring (Optional)'),
               items: const [
                 DropdownMenuItem(value: null, child: Text('None')),
                 DropdownMenuItem(value: 'Daily', child: Text('Daily')),
@@ -230,6 +240,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
             ),
           ],
         ),
+      ),
       ),
       actions: [
         TextButton(
