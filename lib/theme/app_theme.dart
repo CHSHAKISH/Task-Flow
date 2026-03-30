@@ -27,14 +27,22 @@ class AppTheme {
       // Chip theme
       chipTheme: ChipThemeData(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87), // High contrast text
+        backgroundColor: Colors.grey.shade100, // Light gray for normal state
+        selectedColor: Colors.blue.withAlpha(40), // Tint for selected
+        checkmarkColor: Colors.blue, // Blue checkmark instead of white to stick out
+        side: const BorderSide(color: Colors.transparent), // Remove outline entirely
       ),
 
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
-        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        filled: false,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16), // Softer borders
+          borderSide: BorderSide.none,
+        ),
       ),
 
       // App bar theme

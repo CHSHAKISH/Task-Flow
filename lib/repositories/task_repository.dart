@@ -38,9 +38,9 @@ class TaskRepository {
     return task.id;
   }
 
-  /// Get all tasks sorted by creation date descending
+  /// Get all tasks sorted by explicit order, then creation date
   Future<List<Task>> getAllTasks() async {
-    return _isar.tasks.where().sortByCreatedAtDesc().findAll();
+    return _isar.tasks.where().sortBySortOrder().thenByCreatedAtDesc().findAll();
   }
 
   /// Get a single task by ID
@@ -61,6 +61,17 @@ class TaskRepository {
   Future<void> deleteTask(int id) async {
     await _isar.writeTxn(() async {
       await _isar.tasks.delete(id);
+    });
+  }
+
+  /// Update multiple tasks properties at once in a single transaction
+  /// Used primarily for saving reordered states.
+  Future<void> updateTasksBatch(List<Task> tasks) async {
+    for (var task in tasks) {
+      task.updatedAt = DateTime.now();
+    }
+    await _isar.writeTxn(() async {
+      await _isar.tasks.putAll(tasks);
     });
   }
 

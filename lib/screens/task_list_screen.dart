@@ -132,13 +132,39 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
   }
 
   Future<void> _toggleComplete(Task task, bool? value) async {
-    task.statusEnum = value == true ? TaskStatus.done : TaskStatus.todo;
+    final isCompleting = value == true;
+    task.statusEnum = isCompleting ? TaskStatus.done : TaskStatus.todo;
     task.updatedAt = DateTime.now();
+    
     // Quick toggle bypasses the 2-second simulated delay (delete also has no delay)
     await _repository.isar.writeTxn(() async {
       await _repository.isar.tasks.put(task);
+
+      // Recurring logic
+      if (isCompleting && task.recurringType != null) {
+        final cloneDueDate = task.recurringType == 'Daily'
+            ? task.dueDate.add(const Duration(days: 1))
+            : task.dueDate.add(const Duration(days: 7));
+            
+        final clone = Task()
+          ..title = task.title
+          ..description = task.description
+          ..dueDate = cloneDueDate
+          ..status = TaskStatus.todo.name
+          ..blockedBy = task.blockedBy
+          ..recurringType = task.recurringType
+          ..sortOrder = task.sortOrder
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+          
+        await _repository.isar.tasks.put(clone);
+      }
     });
+
     ref.invalidate(tasksProvider);
+    if (mounted && isCompleting && task.recurringType != null) {
+      _showSnack('🔁 Next ${task.recurringType?.toLowerCase()} task scheduled!', success: true);
+    }
   }
 
   void _showSnack(String msg, {bool success = false}) {
@@ -229,9 +255,27 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(tasksProvider),
       color: AppTheme.primarySeed,
-      child: ListView.builder(
+      child: ReorderableListView.builder(
         padding: const EdgeInsets.only(top: 4, bottom: 100),
         itemCount: tasks.length,
+        onReorder: (oldIndex, newIndex) async {
+          if (newIndex > oldIndex) newIndex -= 1;
+          
+          // Create a mutable copy of the tasks list
+          final mutableTasks = List<Task>.from(tasks);
+          
+          final item = mutableTasks.removeAt(oldIndex);
+          mutableTasks.insert(newIndex, item);
+          
+          // Re-assign explicit order integers
+          for (int i = 0; i < mutableTasks.length; i++) {
+            mutableTasks[i].sortOrder = i;
+          }
+          
+          // Persist batch to repository
+          await _repository.updateTasksBatch(mutableTasks);
+          ref.invalidate(tasksProvider);
+        },
         itemBuilder: (ctx, i) {
           final task = tasks[i];
           final isBlocked = TaskOperations.isTaskBlocked(task, tasks);

@@ -11,6 +11,7 @@ class TaskDraft {
   DateTime? dueDate;
   String? status;
   int? blockedBy;
+  String? recurringType;
   late DateTime updatedAt;
 
   TaskDraft();
@@ -21,7 +22,8 @@ class TaskDraft {
         description != null ||
         dueDate != null ||
         status != null ||
-        blockedBy != null;
+        blockedBy != null ||
+        recurringType != null;
   }
 
   @ignore
@@ -40,6 +42,7 @@ class TaskDraft {
       'dueDate': dueDate?.toIso8601String(),
       'status': status,
       'blockedBy': blockedBy,
+      'recurringType': recurringType,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -52,6 +55,7 @@ class TaskDraft {
       ..dueDate = json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null
       ..status = json['status'] as String?
       ..blockedBy = json['blockedBy'] as int?
+      ..recurringType = json['recurringType'] as String?
       ..updatedAt = DateTime.parse(json['updatedAt'] as String);
     return draft;
   }

@@ -42,6 +42,7 @@ class Task {
   late String status;
   int? blockedBy;
   late int sortOrder;
+  String? recurringType;
   late DateTime createdAt;
   late DateTime updatedAt;
 
@@ -70,6 +71,7 @@ class Task {
       'status': status,
       'blockedBy': blockedBy,
       'sortOrder': sortOrder,
+      'recurringType': recurringType,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -83,6 +85,7 @@ class Task {
       ..status = json['status'] as String
       ..blockedBy = json['blockedBy'] as int?
       ..sortOrder = json['sortOrder'] as int
+      ..recurringType = json['recurringType'] as String?
       ..createdAt = DateTime.parse(json['createdAt'] as String)
       ..updatedAt = DateTime.parse(json['updatedAt'] as String);
     
@@ -94,6 +97,6 @@ class Task {
 
   @override
   String toString() {
-    return 'Task(id: $id, title: $title, status: $status, dueDate: $dueDate, blockedBy: $blockedBy)';
+    return 'Task(id: $id, title: $title, status: $status, dueDate: $dueDate, blockedBy: $blockedBy, recurringType: $recurringType)';
   }
 }

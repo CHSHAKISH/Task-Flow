@@ -66,9 +66,9 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                       },
                     )
                   : null,
-              border: const OutlineInputBorder(),
+              border: InputBorder.none,
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             onChanged: (value) {
               setState(() {}); // Update clear button visibility
@@ -99,9 +99,9 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 },
                 avatar: Icon(
                   Icons.circle,
-                  size: 12,
+                  size: 14,
                   color: widget.selectedFilter == TaskStatus.todo
-                      ? Colors.white
+                      ? Colors.orange
                       : Colors.orange,
                 ),
               ),
@@ -115,9 +115,9 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 },
                 avatar: Icon(
                   Icons.circle,
-                  size: 12,
+                  size: 14,
                   color: widget.selectedFilter == TaskStatus.inProgress
-                      ? Colors.white
+                      ? Colors.blue
                       : Colors.blue,
                 ),
               ),
@@ -130,16 +130,16 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 },
                 avatar: Icon(
                   Icons.circle,
-                  size: 12,
+                  size: 14,
                   color: widget.selectedFilter == TaskStatus.done
-                      ? Colors.white
+                      ? Colors.green
                       : Colors.green,
                 ),
               ),
             ],
           ),
         ),
-        const Divider(height: 1),
+        const SizedBox(height: 8),
       ],
     );
   }

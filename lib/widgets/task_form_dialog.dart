@@ -27,6 +27,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
   DateTime? _selectedDate;
   TaskStatus _selectedStatus = TaskStatus.todo;
   int? _selectedBlocker;
+  String? _selectedRecurringType;
   bool _isSaving = false;
 
   final _repository = TaskRepository();
@@ -44,6 +45,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
       _selectedDate = widget.task!.dueDate;
       _selectedStatus = widget.task!.statusEnum;
       _selectedBlocker = widget.task!.blockedBy;
+      _selectedRecurringType = widget.task!.recurringType;
     } else if (widget.draft != null) {
       _titleController = TextEditingController(text: widget.draft!.title);
       _descriptionController = TextEditingController(text: widget.draft!.description);
@@ -52,6 +54,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
           ? TaskStatus.fromString(widget.draft!.status!)
           : TaskStatus.todo;
       _selectedBlocker = widget.draft!.blockedBy;
+      _selectedRecurringType = widget.draft!.recurringType;
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
@@ -85,6 +88,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
       ..description = _descriptionController.text.trim()
       ..dueDate = _selectedDate
       ..status = _selectedStatus.name
+      ..blockedBy = _selectedBlocker
+      ..recurringType = _selectedRecurringType
       ..updatedAt = DateTime.now();
 
     _repository.saveDraft(draft);
@@ -114,6 +119,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
       ..dueDate = _selectedDate!
       ..status = _selectedStatus.name
       ..blockedBy = _selectedBlocker
+      ..recurringType = _selectedRecurringType
       ..sortOrder = _isEdit ? widget.task!.sortOrder : 0
       ..createdAt = _isEdit ? widget.task!.createdAt : DateTime.now()
       ..updatedAt = DateTime.now();
@@ -207,6 +213,19 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
               ],
               onChanged: _isSaving ? null : (value) {
                 setState(() => _selectedBlocker = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedRecurringType,
+              decoration: const InputDecoration(labelText: 'Recurring (Optional)', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('None')),
+                DropdownMenuItem(value: 'Daily', child: Text('Daily')),
+                DropdownMenuItem(value: 'Weekly', child: Text('Weekly')),
+              ],
+              onChanged: _isSaving ? null : (value) {
+                setState(() => _selectedRecurringType = value);
               },
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:task_flow/models/task.dart';
 import 'package:task_flow/theme/app_theme.dart';
+import 'package:task_flow/widgets/highlighted_text.dart';
 
 /// TaskCard widget displays a single task in the list
 class TaskCard extends StatelessWidget {
@@ -55,8 +56,9 @@ class TaskCard extends StatelessWidget {
                     value: task.isCompleted,
                     onChanged: onCheckboxChanged,
                   ),
-            title: Text(
-              task.title,
+            title: HighlightedText(
+              text: task.title,
+              query: searchQuery,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
