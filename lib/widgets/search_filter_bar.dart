@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:task_flow/models/task.dart';
 
 /// SearchFilterBar widget provides search and filter functionality
@@ -61,6 +62,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                   ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
+                        HapticFeedback.lightImpact();
                         _searchController.clear();
                         widget.onSearchChanged('');
                       },
@@ -86,6 +88,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 label: const Text('All'),
                 selected: widget.selectedFilter == null,
                 onSelected: (selected) {
+                  HapticFeedback.lightImpact();
                   if (selected) widget.onFilterChanged(null);
                 },
               ),
@@ -94,6 +97,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 label: const Text('To Do'),
                 selected: widget.selectedFilter == TaskStatus.todo,
                 onSelected: (selected) {
+                  HapticFeedback.lightImpact();
                   widget.onFilterChanged(selected ? TaskStatus.todo : null);
                 },
                 avatar: Icon(
@@ -109,6 +113,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 label: const Text('In Progress'),
                 selected: widget.selectedFilter == TaskStatus.inProgress,
                 onSelected: (selected) {
+                  HapticFeedback.lightImpact();
                   widget.onFilterChanged(
                       selected ? TaskStatus.inProgress : null);
                 },
@@ -125,6 +130,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                 label: const Text('Done'),
                 selected: widget.selectedFilter == TaskStatus.done,
                 onSelected: (selected) {
+                  HapticFeedback.lightImpact();
                   widget.onFilterChanged(selected ? TaskStatus.done : null);
                 },
                 avatar: Icon(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:task_flow/models/task.dart';
 import 'package:task_flow/theme/app_theme.dart';
 import 'package:task_flow/widgets/highlighted_text.dart';
@@ -44,8 +45,18 @@ class TaskCard extends StatelessWidget {
         confirmDismiss: (direction) => _confirmDelete(context),
         onDismissed: (direction) => onDelete?.call(),
         child: Card(
-          child: ListTile(
-            onTap: isBlocked ? null : onTap,
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: isBlocked ? Colors.grey : AppTheme.getStatusColor(task.statusEnum),
+                  width: 5,
+                ),
+              ),
+            ),
+            child: ListTile(
+              onTap: isBlocked ? null : onTap,
             leading: isBlocked
                 ? const Icon(
                     Icons.lock_outline,
@@ -54,7 +65,10 @@ class TaskCard extends StatelessWidget {
                   )
                 : Checkbox(
                     value: task.isCompleted,
-                    onChanged: onCheckboxChanged,
+                    onChanged: (v) {
+                      HapticFeedback.lightImpact();
+                      onCheckboxChanged?.call(v);
+                    },
                   ),
             title: HighlightedText(
               text: task.title,

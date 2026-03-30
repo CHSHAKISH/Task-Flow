@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:task_flow/models/task.dart';
 import 'package:task_flow/models/task_draft.dart';
 import 'package:task_flow/providers/task_provider.dart';
@@ -290,7 +291,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
             onTap: () => _showEditDialog(task),
             onDelete: () => _deleteTask(task),
             onCheckboxChanged: (v) => _toggleComplete(task, v),
-          );
+          ).animate().fade(duration: 300.ms).slideX(begin: 0.1, curve: Curves.easeOutQuad);
         },
       ),
     );
@@ -438,7 +439,7 @@ class _EmptyState extends StatelessWidget {
                 label: const Text('Create Task'),
               ),
             ],
-          ],
+          ].animate(interval: 100.ms).fade(duration: 400.ms).slideY(begin: 0.2, curve: Curves.easeOutBack),
         ),
       ),
     );
