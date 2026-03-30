@@ -135,8 +135,9 @@ class TaskCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<bool?> _confirmDelete(BuildContext context) async {
     return showDialog<bool>(
