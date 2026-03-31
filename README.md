@@ -1,174 +1,56 @@
-# Task Flow
+﻿# Task Flow - Flodo AI Assignment
 
-A polished task management Flutter app built as a **Track B (Mobile Specialist)** submission for the Flodo AI Take-Home Assignment.
+A polished Task Management Flutter application built as a submission for the Flodo AI Take-Home Assignment.
 
----
+## 🚀 Track & Stretch Goal Details
+- **Track Chosen:** Track B (Mobile Specialist)
+- **Stretch Goals Completed:**
+  1. **Debounced Autocomplete Search:** Filters the list as the user types with a non-blocking debounce delay modifying lists and search highlighting dynamically.
+  2. **Recurring Tasks Logic:** Supports toggling features for tasks where marking a task as "Done" auto-generates duplicates with the next due date while keeping the original task completed.
+  3. **Persistent Drag-and-Drop:** Intuitive drag-to-reorder functionality allowing users to shift task priority effectively and persisting the custom user-defined sequence seamlessly across app restarts.
+  
+## 📱 Core Features
+- **Task Management:** Full CRUD operations seamlessly integrated.
+- **Architectural UI Restrictions:** Implemented visual grouping where dependent/blocked tasks appear visibly grayed-out safely disabling interactions until its requirement (blocked-by task) is marked sequentially as Done.
+- **Intelligent Draft Persistence:** If navigating away or minimizing the app whilst typing out a new task form, the app gracefully saves the incomplete drafts intrinsically utilizing WidgetsBindingObserver via AppLifecycleState monitoring. Handily retrieving content precisely where you left off when selecting "Resume Draft".
+- **Search & Filtering:** Functional interactive UI that lets users text-search matching explicit substrings natively connected to filtering out Task Statuses via responsive FilterChips.
+- **Simulated Latency Strategy:** Specifically architectured to explicitly handle mathematical fake 2-second delays mimicking network latency for Create and Update operations smoothly, avoiding UI-locking and duplicate executions.
 
-## Screenshots
+## ⚙️ Setup & Run Instructions
 
-> Run the app locally to experience it live! The UI features smooth animations, a premium design system, and reactive state management.
+**1. Prerequisites:**
+Ensure you have the Flutter SDK locally installed and appropriately configured with an active iOS Simulator, Android Emulator, or a connected physical device.
 
----
-
-## Setup Instructions
-
-### Prerequisites
-- Flutter SDK 3.11.0 or later
-- Dart SDK 3.0.0 or later
-- Android Studio / Xcode (for device emulation)
-
-### Steps
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/CHSHAKISH/Task-Flow.git
+**2. Clone the Repository:**
+``bash
+git clone <your-repo-link>
 cd task_flow
+``
 
-# 2. Install dependencies
+**3. Install Dependencies:**
+Fetch all required dependencies:
+``bash
 flutter pub get
+``
 
-# 3. Generate Isar database schemas (if .g.dart files aren't present)
-dart run build_runner build --delete-conflicting-outputs
+*(Note: If code-generation is needed for the data layer based on schema structural changes, run: flutter pub run build_runner build --delete-conflicting-outputs)*
 
-# 4. Run the app
+**4. Run the Project:**
+Compile and launch natively:
+``bash
 flutter run
-```
+``
 
-### Supported Platforms
-- ✅ Android
-- ✅ iOS
-- ✅ Windows
-- ✅ macOS
-- ✅ Web
+## 🤖 AI Usage Report
+AI tools were thoughtfully integrated as significant productivity multipliers across this assignment's sprint timeline. 
+**Models used:** GitHub Copilot (utilizing Gemini 3.1 Pro Preview).
 
----
+**Most Helpful Prompts utilized:**
+1. *"Architect a declarative Riverpod state-management plan extracting heavy inline UI code inside main.dart to neatly abstracted modular Provider components orchestrating decoupled Search/Filter logic."*
+2. *"Implement a resilient WidgetsBindingObserver lifecycle hook safely indexing the active text controllers before abruptly closing the form interface to securely serialize drafts locally responding to AppLifecycleState.paused logic without memory leaks."*
+3. *"Construct an optimal Dismissible widget structurally verifying Swipe-To-Delete gesture operations combining AlertDialog safety layers successfully mapped to Repository triggers."*
 
-## Track
-
-**Track B – Mobile Specialist**
-
-Focus: Deep Flutter/Dart expertise, local database, state management, and premium UI/UX.
-
----
-
-## Stretch Goal
-
-**Debounced Autocomplete Search with Text Highlighting**
-
-- Search queries are debounced at **300ms** using a custom `Debouncer` utility
-- Matching substrings in both **title** and **description** are highlighted in amber/yellow using a custom `HighlightedText` widget
-- Combined with status filter chips for compound filtering
-
----
-
-## Architecture
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| UI | Flutter + Material 3 | Screens, widgets, animations |
-| State | Riverpod 2 | Reactive providers, search/filter state |
-| Repository | `TaskRepository` | Abstraction over Isar |
-| Database | Isar 3 | Physical persistence across restarts |
-| Fonts | Google Fonts (Inter) | Premium typography |
-
-### File Structure
-
-```
-lib/
-├── main.dart                    # Entry point (~30 lines)
-├── models/
-│   ├── task.dart                # Isar @collection with @ignore guards
-│   └── task_draft.dart          # Draft model with Isar annotations
-├── repositories/
-│   └── task_repository.dart     # Full Isar CRUD + draft operations
-├── providers/
-│   └── task_provider.dart       # Riverpod FutureProvider + StateProviders
-├── screens/
-│   └── task_list_screen.dart    # Main screen (ConsumerStatefulWidget)
-├── widgets/
-│   ├── task_card.dart           # Animated card with fade-in + HighlightedText
-│   ├── task_form_dialog.dart    # Create/Edit dialog with draft auto-save
-│   ├── search_filter_bar.dart   # 300ms debounced search + styled filter chips
-│   └── highlighted_text.dart   # RichText span-based text highlighter
-├── theme/
-│   └── app_theme.dart           # Complete Material 3 design system
-└── utils/
-    └── debouncer.dart           # Reusable debounce timer wrapper
-```
-
----
-
-## Core Features
-
-### ✅ CRUD Operations
-- Create, Read, Update, Delete tasks
-- All Create/Update operations simulate a **2-second delay** with a visible loading state
-- The Save button is disabled during the operation to prevent double-tap
-
-### ✅ Task Data Model
-Each task has exactly the required 4 fields:
-1. **Title** (String)
-2. **Description** (String)
-3. **Due Date** (DateTime)
-4. **Status** (Enum: To Do / In Progress / Done)
-5. **Blocked By** (Optional: dropdown to select another task)
-
-### ✅ Blocked Tasks
-- Tasks blocked by an incomplete task are visually greyed out (AnimatedOpacity)
-- A lock icon and "Blocked by [Task Name]" label appears in the footer
-- Blocked tasks cannot be tapped (editing is disabled)
-- As soon as the blocker task is marked Done, the blocked task becomes active
-
-### ✅ Search & Filter
-- Search by title or description using the search bar (debounced 300ms)
-- Filter by status using the color-coded chip row
-- Search and filter can be combined
-
-### ✅ Draft Persistence
-- When the user minimizes the app while typing a new task, the draft is automatically saved to Isar (physical DB)
-- On next launch, a "Unsaved Draft" dialog appears with the draft content preview
-- User can **Resume** (pre-fills the form) or **Discard** the draft
-- Drafts older than 24 hours are silently discarded
-
----
-
-## Design System
-
-- **Color Palette**: Deep Indigo (#5C6BC0) primary, with semantic status colors
-- **Typography**: [Inter](https://fonts.google.com/specimen/Inter) via Google Fonts
-- **Cards**: Borderless elevation-0 cards with a subtle grey border and 16dp radius
-- **Animations**: Fade-in on card mount, AnimatedOpacity for blocked state, AnimatedContainer for filter chip selections, AnimatedSwitcher for save button loading state
-- **Haptics**: `HapticFeedback.lightImpact()` on checkbox toggle
-- **Empty States**: Custom illustrated empty states for no tasks and no search results
-
----
-
-## Technical Decisions
-
-### Why Isar over SQLite/Hive?
-Isar is modern, type-safe, and extremely fast. Its `build_runner` codegen approach ensures compile-time safety on all queries, and it offers native Flutter support. SQLite requires a bridge layer (sqflite) which adds boilerplate; Hive lacks the query capabilities needed for filtering/searching.
-
-### Why Riverpod over Provider/Bloc?
-Riverpod 2's compile-time safety, `ref.invalidate()` for targeted cache invalidation, and testability make it perfect for Track B's "state management excellence" requirement. It avoids the `BuildContext` dependency issues of Provider.
-
-### 2-Second Delay Implementation
-The delay is applied only to `createTask()` and `updateTask()` in `TaskRepository` via `Future.delayed(const Duration(seconds: 2))` before the Isar write transaction. Quick-toggle (checkbox) and delete bypass this intentionally — instant feedback is better UX for these actions.
-
-### Draft Singleton Design
-The draft is always stored at `id=1` in the `TaskDraft` Isar collection. This makes `put/get/delete(1)` O(1) and avoids needing to query for the "latest" draft. Only create mode (not edit mode) generates drafts.
-
----
-
-## AI Usage Report
-
-This project was built with the assistance of **Gemini (Antigravity)**.
-
-### Most Helpful Prompts
-- "Annotate Task and TaskDraft models with Isar @collection. Use @ignore on computed getters."
-- "Create a premium Material 3 theme with Inter font, indigo palette, and proper CardThemeData."
-- "Rebuild TaskCard with fade-in AnimationController, AnimatedOpacity for blocked state, HighlightedText in title and description."
-
-### Examples of Bad AI Code (and Fixes)
-- **Bad**: AI initially used `Isar.autoIncrement` directly in a `Task()` field assignment inside the form dialog, which doesn't make sense — Isar assigns IDs during `writeTxn`. **Fix**: Changed to `id = 0` (which Isar treats as auto-increment).
-- **Bad**: AI used `CardTheme` where `CardThemeData` was required by `ThemeData.cardTheme`. **Fix**: Corrected the type.
-- **Bad**: AI used `TaskRepository().isar.writeTxn(...)` (creating a new instance) inside `_toggleComplete`. **Fix**: Changed to use the singleton `_repository.isar`.
+**Examples of bad AI code & resolutions:**
+- **The Issue:** While extracting the TaskFormDialog out of main.dart into a cleaner component structure, the AI initially attempted to bind the draft's explicit WidgetsBindingObserver listening state entirely globally while referencing locally destroyed component Form states causing saving operations to inherently execute 
+ull!
+- **The Fix:** Architecturally restructured the component relationship by migrating the explicit lifecycle observer hooks locally inside the encapsulated custom TaskFormDialog widget inherently so text values corresponded truthfully to the active scope.

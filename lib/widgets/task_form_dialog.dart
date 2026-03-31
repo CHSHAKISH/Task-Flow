@@ -174,7 +174,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
-          child: Column(
+          child: Padding(padding: const EdgeInsets.only(top: 12.0, bottom: 24.0), child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
             TextField(
@@ -242,8 +242,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
           ],
         ),
       ),
-      ),
-      actions: [
+      ),      ),      actions: [
         TextButton(
           onPressed: _isSaving ? null : () {
             if (!_isEdit) {
@@ -264,3 +263,5 @@ class _TaskFormDialogState extends State<TaskFormDialog> with WidgetsBindingObse
     );
   }
 }
+
+
