@@ -48,7 +48,7 @@ flutter run
 
 ## 🤖 AI Usage Report
 AI tools were thoughtfully integrated as significant productivity multipliers across this assignment's sprint timeline. 
-**Models used:** GitHub Copilot (utilizing Gemini 3.1 Pro Preview).
+**Models used:** GitHub Copilot (utilizing Claude Sonnet 4.6, Gemini 3.1 Pro Preview).
 
 **Most Helpful Prompts utilized:**
 1. *"Implement a resilient WidgetsBindingObserver lifecycle hook safely indexing the active text controllers before abruptly closing the form interface to securely serialize drafts locally responding to AppLifecycleState.paused logic without memory leaks."*
