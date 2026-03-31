@@ -217,15 +217,14 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen>
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppTheme.primarySeed,
-              borderRadius: BorderRadius.circular(8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
             ),
-            child: const Icon(Icons.task_alt_rounded,
-                color: Colors.white, size: 18),
           ),
           const SizedBox(width: 8),
           Text(

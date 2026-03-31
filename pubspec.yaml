@@ -52,6 +52,7 @@ dependencies:
   uuid: ^4.3.0     # Generate unique IDs for drafts
   flutter_native_splash: ^2.4.7
   flutter_animate: ^4.5.2
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +68,24 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/images/logo.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/images/logo.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/images/logo.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -113,12 +132,12 @@ flutter:
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: "assets/images/logo.png"
+  image: "assets/images/logo_splash.png"
   android: true
   ios: true
   web: false
   android_12:
     color: "#FFFFFF"
-    image: "assets/images/logo.png"
+    image: "assets/images/logo_splash.png"
     icon_background_color: "#FFFFFF"
 
