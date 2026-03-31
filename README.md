@@ -4,10 +4,15 @@ A polished Task Management Flutter application built as a submission for the Flo
 
 ## 🚀 Track & Stretch Goal Details
 - **Track Chosen:** Track B (Mobile Specialist)
-- **Stretch Goals Completed:**
+- **Stretch Goals Completed (All Completed!):**
   1. **Debounced Autocomplete Search:** Filters the list as the user types with a non-blocking debounce delay modifying lists and search highlighting dynamically.
   2. **Recurring Tasks Logic:** Supports toggling features for tasks where marking a task as "Done" auto-generates duplicates with the next due date while keeping the original task completed.
   3. **Persistent Drag-and-Drop:** Intuitive drag-to-reorder functionality allowing users to shift task priority effectively and persisting the custom user-defined sequence seamlessly across app restarts.
+
+## ✨ UI/UX Improvements & Polish
+- **Haptic Feedback:** Integrated subtle, platform-native vibration feedback on key interactions (such as dragging-and-dropping, completing tasks, and general gestures) to elevate the tactile feel and responsiveness of the app.
+- **Refined Branding:** Complete integration of custom app launcher icons, header graphics, and flawlessly uncropped native splash screens.
+- **Startup Optimization:** Transitioned local database initialization into asynchronous app rendering to dramatically speed up native splash screen dismissal and unblock the initial UI frame.
   
 ## 📱 Core Features
 - **Task Management:** Full CRUD operations seamlessly integrated.
@@ -46,9 +51,8 @@ AI tools were thoughtfully integrated as significant productivity multipliers ac
 **Models used:** GitHub Copilot (utilizing Gemini 3.1 Pro Preview).
 
 **Most Helpful Prompts utilized:**
-1. *"Architect a declarative Riverpod state-management plan extracting heavy inline UI code inside main.dart to neatly abstracted modular Provider components orchestrating decoupled Search/Filter logic."*
-2. *"Implement a resilient WidgetsBindingObserver lifecycle hook safely indexing the active text controllers before abruptly closing the form interface to securely serialize drafts locally responding to AppLifecycleState.paused logic without memory leaks."*
-3. *"Construct an optimal Dismissible widget structurally verifying Swipe-To-Delete gesture operations combining AlertDialog safety layers successfully mapped to Repository triggers."*
+1. *"Implement a resilient WidgetsBindingObserver lifecycle hook safely indexing the active text controllers before abruptly closing the form interface to securely serialize drafts locally responding to AppLifecycleState.paused logic without memory leaks."*
+2. *"Construct an optimal Dismissible widget structurally verifying Swipe-To-Delete gesture operations combining AlertDialog safety layers successfully mapped to Repository triggers."*
 
 **Examples of bad AI code & resolutions:**
 - **The Issue:** While extracting the TaskFormDialog out of main.dart into a cleaner component structure, the AI initially attempted to bind the draft's explicit WidgetsBindingObserver listening state entirely globally while referencing locally destroyed component Form states causing saving operations to inherently execute 
